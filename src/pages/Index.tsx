@@ -5,7 +5,7 @@ import logomarkImg from "@/assets/logomark.png";
 import AnimatedEyes from "@/components/AnimatedEyes";
 import TypewriterText from "@/components/TypewriterText";
 
-type Phase = "lockup" | "reveal" | "grow" | "eyes-drop" | "intro" | "intro-lovelace-wait" | "intro-lovelace" | "intro-tagline";
+type Phase = "lockup" | "reveal" | "grow" | "eyes-drop" | "intro" | "intro-lovelace-wait" | "intro-lovelace";
 
 const TARGET_SIZE = 160;
 // Match CSS: h-20 = 80px, md:h-28 = 112px
@@ -158,12 +158,11 @@ const Index = () => {
 
   const showLockup = phase === "lockup";
   const isRevealed = phase !== "lockup";
-  const introPhases: Phase[] = ["intro", "intro-lovelace-wait", "intro-lovelace", "intro-tagline"];
+  const introPhases: Phase[] = ["intro", "intro-lovelace-wait", "intro-lovelace"];
   const isGrown = phase === "grow" || phase === "eyes-drop" || introPhases.includes(phase);
   const showEyes = phase === "eyes-drop" || introPhases.includes(phase);
   const showIntro = introPhases.includes(phase);
-  const showLovelace = phase === "intro-lovelace" || phase === "intro-tagline";
-  const showTagline = phase === "intro-tagline";
+  const showLovelace = phase === "intro-lovelace";
 
   return (
     <div className="flex min-h-screen items-start justify-center bg-background overflow-hidden pt-[35vh]">
@@ -231,24 +230,13 @@ const Index = () => {
             </p>
 
             {showLovelace && (
-              <h1 className="text-5xl md:text-7xl font-black tracking-tight text-foreground mt-6">
+              <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-foreground mt-6">
                 <TypewriterText
                   text="Lovelace"
                   speed={80}
-                  showCursor={!showTagline}
-                  onComplete={() => setPhase("intro-tagline")}
-                />
-              </h1>
-            )}
-
-            {showTagline && (
-              <p className="text-lg md:text-xl font-medium text-muted-foreground mt-4 flex items-center">
-                <TypewriterText
-                  text="Sourcing at scale"
-                  speed={40}
                   showCursor={true}
                 />
-              </p>
+              </h1>
             )}
           </div>
         )}
