@@ -97,8 +97,8 @@ const AnimatedEyes = ({
   }, []);
 
   useEffect(() => {
-    if (animate) detectEyes();
-  }, [animate, detectEyes]);
+    detectEyes();
+  }, [detectEyes]);
 
   useEffect(() => {
     if (!animate || !dropped) return;
@@ -153,7 +153,7 @@ const AnimatedEyes = ({
       <canvas ref={canvasRef} className="hidden" />
       <img src={logomark} alt="Lovelace" className="w-full h-full object-contain" />
 
-      {animate && eyePositions && (
+      {eyePositions && (
         <>
           {/* White covers to hide original eyes */}
           {[eyePositions.left, eyePositions.right].map((eye, i) => (
