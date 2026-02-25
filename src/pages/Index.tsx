@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import lockupImg from "@/assets/lockup.png";
+import logomarkImg from "@/assets/logomark.png";
 import AnimatedEyes from "@/components/AnimatedEyes";
 
 type Phase = "lockup" | "reveal" | "grow" | "eyes-drop" | "intro";
@@ -13,59 +14,125 @@ const Index = () => {
   const [phase, setPhase] = useState<Phase>("lockup");
   const [logoOffset, setLogoOffset] = useState<{ x: number; y: number; scale: number } | null>(null);
 
-  // Preload lockup and detect logomark position
+  // Preload both images and compute perfect overlay alignment
   useEffect(() => {
-    const img = new Image();
-    img.onload = () => {
+    let lockupBounds: { cx: number; cy: number; size: number; w: number; h: number } | null = null;
+    let logomarkBounds: { cx: number; cy: number; size: number; w: number; h: number } | null = null;
+    let lockupW = 0, lockupH = 0, logomarkW = 0, logomarkH = 0;
+
+    const scanDarkPixels = (
+      img: HTMLImageElement,
+      region: { left: number; top: number; right: number; bottom: number }
+    ) => {
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
+      if (!ctx) return null;
       canvas.width = img.width;
       canvas.height = img.height;
       ctx.drawImage(img, 0, 0);
-
-      const scanRight = Math.floor(img.width * 0.4);
+      const { left, top, right, bottom } = region;
       let imageData: ImageData;
       try {
-        imageData = ctx.getImageData(0, 0, scanRight, img.height);
+        imageData = ctx.getImageData(left, top, right - left, bottom - top);
       } catch {
-        return;
+        return null;
       }
-
       let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
       for (let y = 0; y < imageData.height; y++) {
         for (let x = 0; x < imageData.width; x++) {
           const i = (y * imageData.width + x) * 4;
           if (imageData.data[i] < 50 && imageData.data[i + 1] < 50 && imageData.data[i + 2] < 50 && imageData.data[i + 3] > 200) {
-            if (x < minX) minX = x;
-            if (x > maxX) maxX = x;
-            if (y < minY) minY = y;
-            if (y > maxY) maxY = y;
+            const absX = x + left;
+            const absY = y + top;
+            if (absX < minX) minX = absX;
+            if (absX > maxX) maxX = absX;
+            if (absY < minY) minY = absY;
+            if (absY > maxY) maxY = absY;
           }
         }
       }
-
-      if (minX === Infinity) return;
-
-      // Compute rendered lockup width from aspect ratio
-      const aspectRatio = img.width / img.height;
-      const renderedW = LOCKUP_HEIGHT * aspectRatio;
-
-      const scaleX = renderedW / img.width;
-      const scaleY = LOCKUP_HEIGHT / img.height;
-
-      const centerX = (minX + maxX) / 2;
-      const centerY = (minY + maxY) / 2;
-      const logomarkSize = Math.max(maxX - minX, maxY - minY) * scaleX;
-
-      setLogoOffset({
-        x: (centerX - img.width / 2) * scaleX,
-        y: (centerY - img.height / 2) * scaleY,
-        scale: logomarkSize / TARGET_SIZE,
-      });
+      if (minX === Infinity) return null;
+      return {
+        cx: (minX + maxX) / 2,
+        cy: (minY + maxY) / 2,
+        size: Math.max(maxX - minX, maxY - minY),
+        w: img.width,
+        h: img.height,
+      };
     };
-    img.src = lockupImg;
+
+    const tryCompute = () => {
+      if (!lockupBounds || !logomarkBounds) return;
+
+      // Rendered lockup dimensions (aspect-ratio preserved via height constraint)
+      const lockupAspect = lockupW / lockupH;
+      const renderedW = LOCKUP_HEIGHT * lockupAspect;
+      const scaleR = renderedW / lockupW;
+
+      // Logo center offset from lockup image center, in rendered pixels
+      const lockupLogoCX = (lockupBounds.cx - lockupW / 2) * scaleR;
+      const lockupLogoCY = (lockupBounds.cy - lockupH / 2) * scaleR;
+      const lockupLogoSize = lockupBounds.size * scaleR;
+
+      // How logomark.png renders inside the TARGET_SIZE div via object-contain
+      const mAspect = logomarkW / logomarkH;
+      let mRenderW: number, mRenderH: number;
+      if (mAspect >= 1) {
+        mRenderW = TARGET_SIZE;
+        mRenderH = TARGET_SIZE / mAspect;
+      } else {
+        mRenderH = TARGET_SIZE;
+        mRenderW = TARGET_SIZE * mAspect;
+      }
+      const mOffX = (TARGET_SIZE - mRenderW) / 2;
+      const mOffY = (TARGET_SIZE - mRenderH) / 2;
+
+      // Logo center within the TARGET_SIZE div
+      const logoCenterInDivX = mOffX + (logomarkBounds.cx / logomarkW) * mRenderW;
+      const logoCenterInDivY = mOffY + (logomarkBounds.cy / logomarkH) * mRenderH;
+
+      // Logo size within the TARGET_SIZE div
+      const logoSizeInDiv = (logomarkBounds.size / logomarkW) * mRenderW;
+
+      // Scale to match lockup logo size to overlay logo size
+      const scale = lockupLogoSize / logoSizeInDiv;
+
+      // Offset from div center to logo center within div
+      const divToLogoCX = logoCenterInDivX - TARGET_SIZE / 2;
+      const divToLogoCY = logoCenterInDivY - TARGET_SIZE / 2;
+
+      // Position: divPos + divToLogoC * scale = lockupLogoC
+      const x = lockupLogoCX - divToLogoCX * scale;
+      const y = lockupLogoCY - divToLogoCY * scale;
+
+      setLogoOffset({ x, y, scale });
+    };
+
+    const img1 = new Image();
+    img1.onload = () => {
+      lockupW = img1.width;
+      lockupH = img1.height;
+      lockupBounds = scanDarkPixels(img1, {
+        left: 0, top: 0,
+        right: Math.floor(img1.width * 0.4),
+        bottom: img1.height,
+      });
+      tryCompute();
+    };
+    img1.src = lockupImg;
+
+    const img2 = new Image();
+    img2.onload = () => {
+      logomarkW = img2.width;
+      logomarkH = img2.height;
+      logomarkBounds = scanDarkPixels(img2, {
+        left: 0, top: 0,
+        right: img2.width,
+        bottom: img2.height,
+      });
+      tryCompute();
+    };
+    img2.src = logomarkImg;
   }, []);
 
   // Phase timers
