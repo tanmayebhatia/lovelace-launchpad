@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
+import logomark from "@/assets/logomark.png";
 
 const AnimatedEyes = ({ size = 200 }: { size?: number }) => {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [blinking, setBlinking] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -13,7 +15,6 @@ const AnimatedEyes = ({ size = 200 }: { size?: number }) => {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
-  // Blink randomly
   useEffect(() => {
     const blink = () => {
       setBlinking(true);
@@ -25,80 +26,59 @@ const AnimatedEyes = ({ size = 200 }: { size?: number }) => {
     return () => clearInterval(interval);
   }, []);
 
-  // Calculate eye offset based on mouse position relative to center
-  const getEyeOffset = (eyeCenterX: number, eyeCenterY: number) => {
-    const dx = mousePos.x - eyeCenterX;
-    const dy = mousePos.y - eyeCenterY;
+  const getEyeOffset = () => {
+    if (!containerRef.current) return { x: 0, y: 0 };
+    const rect = containerRef.current.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height * 0.38;
+    const dx = mousePos.x - cx;
+    const dy = mousePos.y - cy;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    const maxOffset = size * 0.04;
-    const scale = Math.min(maxOffset / (dist + 1), 0.08);
-    return { x: dx * scale, y: dy * scale };
+    const maxOffset = size * 0.03;
+    const factor = Math.min(maxOffset, dist * 0.02);
+    const angle = Math.atan2(dy, dx);
+    return { x: Math.cos(angle) * factor, y: Math.sin(angle) * factor };
   };
 
-  const scale = size / 200;
-  const eyeRadius = 14 * scale;
-  const pupilRadius = 14 * scale;
-
-  // Eye positions relative to the SVG viewbox
-  const leftEye = { cx: 68 * scale, cy: 72 * scale };
-  const rightEye = { cx: 132 * scale, cy: 72 * scale };
-
-  const leftOffset = getEyeOffset(
-    window.innerWidth / 2 - 32 * scale,
-    window.innerHeight / 2 - 28 * scale
-  );
-  const rightOffset = getEyeOffset(
-    window.innerWidth / 2 + 32 * scale,
-    window.innerHeight / 2 - 28 * scale
-  );
+  const offset = getEyeOffset();
+  const eyeSize = size * 0.115;
 
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox={`0 0 ${size} ${size}`}
-      className="overflow-visible"
-    >
-      {/* Logo shape - the square with smile */}
-      <rect x={0} y={16 * scale} width={size} height={size - 16 * scale} fill="black" rx={0} />
-      {/* Top bar */}
-      <rect x={0} y={0} width={size * 0.75} height={18 * scale} fill="black" />
-
-      {/* Smile cutout */}
-      <ellipse
-        cx={size / 2}
-        cy={size * 0.65}
-        rx={size * 0.35}
-        ry={size * 0.32}
-        fill="white"
-      />
-
-      {/* Left eye */}
-      <motion.circle
-        cx={leftEye.cx + leftOffset.x}
-        cy={leftEye.cy + leftOffset.y}
-        r={blinking ? pupilRadius * 0.2 : pupilRadius}
-        fill="black"
-        animate={{
-          cy: blinking ? leftEye.cy : leftEye.cy + leftOffset.y,
-          r: blinking ? pupilRadius * 0.2 : pupilRadius,
+    <div ref={containerRef} className="relative" style={{ width: size, height: size }}>
+      <img src={logomark} alt="Lovelace" className="w-full h-full object-contain" />
+      {/* Left eye overlay */}
+      <motion.div
+        className="absolute rounded-full bg-foreground"
+        style={{
+          width: eyeSize,
+          height: blinking ? eyeSize * 0.15 : eyeSize,
+          left: `${31.5}%`,
+          top: `${34}%`,
+          transform: `translate(${offset.x}px, ${offset.y}px)`,
         }}
-        transition={{ duration: 0.1 }}
-      />
-
-      {/* Right eye */}
-      <motion.circle
-        cx={rightEye.cx + rightOffset.x}
-        cy={rightEye.cy + rightOffset.y}
-        r={blinking ? pupilRadius * 0.2 : pupilRadius}
-        fill="black"
         animate={{
-          cy: blinking ? rightEye.cy : rightEye.cy + rightOffset.y,
-          r: blinking ? pupilRadius * 0.2 : pupilRadius,
+          height: blinking ? eyeSize * 0.15 : eyeSize,
+          borderRadius: "50%",
         }}
-        transition={{ duration: 0.1 }}
+        transition={{ duration: 0.08 }}
       />
-    </svg>
+      {/* Right eye overlay */}
+      <motion.div
+        className="absolute rounded-full bg-foreground"
+        style={{
+          width: eyeSize,
+          height: blinking ? eyeSize * 0.15 : eyeSize,
+          left: `${56.5}%`,
+          top: `${34}%`,
+          transform: `translate(${offset.x}px, ${offset.y}px)`,
+        }}
+        animate={{
+          height: blinking ? eyeSize * 0.15 : eyeSize,
+          borderRadius: "50%",
+        }}
+        transition={{ duration: 0.08 }}
+      />
+    </div>
   );
 };
 
