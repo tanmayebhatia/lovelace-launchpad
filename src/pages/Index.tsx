@@ -114,7 +114,7 @@ const Index = () => {
       lockupH = img1.height;
       lockupBounds = scanDarkPixels(img1, {
         left: 0, top: 0,
-        right: Math.floor(img1.width * 0.4),
+        right: Math.floor(img1.width * 0.25),
         bottom: img1.height,
       });
       tryCompute();
