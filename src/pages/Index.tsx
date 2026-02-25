@@ -16,8 +16,8 @@ const Index = () => {
 
   // Preload both images and compute perfect overlay alignment
   useEffect(() => {
-    let lockupBounds: { cx: number; cy: number; size: number; w: number; h: number } | null = null;
-    let logomarkBounds: { cx: number; cy: number; size: number; w: number; h: number } | null = null;
+    let lockupResult: { cx: number; cy: number; bw: number; bh: number } | null = null;
+    let logomarkResult: { cx: number; cy: number; bw: number; bh: number } | null = null;
     let lockupW = 0, lockupH = 0, logomarkW = 0, logomarkH = 0;
 
     const scanDarkPixels = (
@@ -55,24 +55,24 @@ const Index = () => {
       return {
         cx: (minX + maxX) / 2,
         cy: (minY + maxY) / 2,
-        size: Math.max(maxX - minX, maxY - minY),
-        w: img.width,
-        h: img.height,
+        bw: maxX - minX,
+        bh: maxY - minY,
       };
     };
 
     const tryCompute = () => {
-      if (!lockupBounds || !logomarkBounds) return;
+      if (!lockupResult || !logomarkResult) return;
 
       // Rendered lockup dimensions (aspect-ratio preserved via height constraint)
       const lockupAspect = lockupW / lockupH;
       const renderedW = LOCKUP_HEIGHT * lockupAspect;
       const scaleR = renderedW / lockupW;
 
-      // Logo center offset from lockup image center, in rendered pixels
-      const lockupLogoCX = (lockupBounds.cx - lockupW / 2) * scaleR;
-      const lockupLogoCY = (lockupBounds.cy - lockupH / 2) * scaleR;
-      const lockupLogoSize = lockupBounds.size * scaleR;
+      // Lockup icon center & dimensions in rendered pixels
+      const lockupLogoCX = (lockupResult.cx - lockupW / 2) * scaleR;
+      const lockupLogoCY = (lockupResult.cy - lockupH / 2) * scaleR;
+      const lockupIconW = lockupResult.bw * scaleR;
+      const lockupIconH = lockupResult.bh * scaleR;
 
       // How logomark.png renders inside the TARGET_SIZE div via object-contain
       const mAspect = logomarkW / logomarkH;
@@ -87,21 +87,20 @@ const Index = () => {
       const mOffX = (TARGET_SIZE - mRenderW) / 2;
       const mOffY = (TARGET_SIZE - mRenderH) / 2;
 
-      // Logo center within the TARGET_SIZE div
-      const logoCenterInDivX = mOffX + (logomarkBounds.cx / logomarkW) * mRenderW;
-      const logoCenterInDivY = mOffY + (logomarkBounds.cy / logomarkH) * mRenderH;
+      // Logomark content bounds within the TARGET_SIZE div
+      const logoContentW = (logomarkResult.bw / logomarkW) * mRenderW;
+      const logoContentH = (logomarkResult.bh / logomarkH) * mRenderH;
+      const logoCenterInDivX = mOffX + (logomarkResult.cx / logomarkW) * mRenderW;
+      const logoCenterInDivY = mOffY + (logomarkResult.cy / logomarkH) * mRenderH;
 
-      // Logo size within the TARGET_SIZE div
-      const logoSizeInDiv = (logomarkBounds.size / logomarkW) * mRenderW;
+      // Scale to match lockup icon width to overlay content width (prevents bleeding into text)
+      const scale = lockupIconW / logoContentW;
 
-      // Scale to match lockup logo size to overlay logo size
-      const scale = lockupLogoSize / logoSizeInDiv;
-
-      // Offset from div center to logo center within div
+      // Offset from div center to content center
       const divToLogoCX = logoCenterInDivX - TARGET_SIZE / 2;
       const divToLogoCY = logoCenterInDivY - TARGET_SIZE / 2;
 
-      // Position: divPos + divToLogoC * scale = lockupLogoC
+      // Position: divPos + divToLogoC * scale = lockupLogoCenter
       const x = lockupLogoCX - divToLogoCX * scale;
       const y = lockupLogoCY - divToLogoCY * scale;
 
@@ -112,7 +111,7 @@ const Index = () => {
     img1.onload = () => {
       lockupW = img1.width;
       lockupH = img1.height;
-      lockupBounds = scanDarkPixels(img1, {
+      lockupResult = scanDarkPixels(img1, {
         left: 0, top: 0,
         right: Math.floor(img1.width * 0.25),
         bottom: img1.height,
@@ -125,7 +124,7 @@ const Index = () => {
     img2.onload = () => {
       logomarkW = img2.width;
       logomarkH = img2.height;
-      logomarkBounds = scanDarkPixels(img2, {
+      logomarkResult = scanDarkPixels(img2, {
         left: 0, top: 0,
         right: img2.width,
         bottom: img2.height,
