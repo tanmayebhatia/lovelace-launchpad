@@ -1,44 +1,97 @@
 
 
-## Plan: Pixar-Style Logo Animation + Eye Fix
+# Fix: Seamless Primary-to-Lovelace Transition
 
-### 1. Fix: Reduce white eye cover radius
-In `AnimatedEyes.tsx`, reduce the white cover multiplier from `radius * 3` to `radius * 2.2` so it no longer clips the top outline of the logo shape.
+## The Problem
 
-### 2. Redesign the animation sequence (Pixar-style)
-Completely rework `Index.tsx` to use a continuous, physical animation instead of swapping between separate components. The new phases:
+The current animation has a jarring crossfade: the entire lockup (icon + text) fades out while the logomark overlay fades in. Even with perfect alignment, this opacity crossfade creates a visible flash/swap.
 
-**Phase 1 - "lockup" (0-2s):**  
-The full Primary lockup image fades in (same as now).
+## The User's Intent
 
-**Phase 2 - "text-fade" (2s-3s):**  
-Instead of swapping to a new component, keep the lockup visible but fade out the text portion. We'll accomplish this by overlaying the lockup with two elements side by side: the logomark (always visible) and the text (which fades out). Alternatively, since we have both assets, show the lockup, then crossfade to just the logomark standing upright in the same position.
+1. Primary lockup is shown (icon + "Primary" text)
+2. The **text fades away**, but the **icon stays perfectly still** -- no flash, no swap
+3. The icon then smoothly grows bigger and rotates from -90deg to 0deg (becoming the Lovelace face)
+4. Eyes drop in, text appears
 
-**Phase 3 - "fall" (3s-4.5s):**  
-The upright logomark physically tips over - rotates 90 degrees with a slight bounce at the end (like it's falling onto its side). Use a spring/bounce easing to sell the weight. It should feel like the Pixar lamp hopping.
+## Root Cause
 
-**Phase 4 - "eyes-drop" (4.5s-5.5s):**  
-The logomark is now on its side (which is the Lovelace orientation). The eyes drop in from above - two black circles fall from off-screen into the eye socket positions with a slight bounce. Once they land, they blink once to "wake up."
+The logomark overlay (`AnimatedEyes`) starts at `opacity: 0` and only fades in when the lockup fades out. This simultaneous crossfade is what causes the jank -- two images swapping visibility at the same time.
 
-**Phase 5 - "intro" (5.5s+):**  
-Eyes start tracking the mouse. Text fades in below: "Introducing the first PrimaryOS product" then "Lovelace" then "Sourcing at scale."
+## Solution
 
-### Technical approach
+Make the logomark overlay **visible from the very start** (`opacity: 1`), positioned and rotated to perfectly match the icon inside `lockup.png`. Since it sits on top and matches exactly, it's visually invisible. When the lockup fades out, only the text disappears -- the icon appears to stay because the overlay was already there all along.
 
-**`Index.tsx` changes:**
-- New phase type: `"lockup" | "text-fade" | "fall" | "eyes-drop" | "intro"`
-- Use a single continuous animation container (no `AnimatePresence mode="wait"` swapping for the logo portion) so the logomark persists across phases
-- The lockup shows first, then we transition to showing just the logomark upright
-- The logomark rotates 90deg with `transition: { type: "spring", damping: 12, stiffness: 100 }` for a bouncy fall
-- After falling, render AnimatedEyes but with eyes initially hidden
+### The Eye Cover Issue
 
-**`AnimatedEyes.tsx` changes:**
-- Reduce white cover radius multiplier from `3` to `2.2`
-- Add a new prop `showEyes` (default `true`) — when false, the animated eye pupils are hidden (opacity 0, positioned above)
-- Add a `dropIn` prop — when true, the eyes animate from `y: -50px, opacity: 0` to `y: 0, opacity: 1` with a spring bounce, then trigger a single blink
-- After the drop-in completes, normal mouse tracking and random blinking begins
+`AnimatedEyes` renders white circles over the logomark's painted eyes. If these are visible from the start (rotated -90deg over the lockup icon), they'd blank out the eyes during the lockup phase, looking wrong. We need to hide the white covers until the grow phase begins.
 
-### File changes summary
-- **`src/components/AnimatedEyes.tsx`**: Reduce cover radius, add `showEyes`/`dropIn` props for the eye-drop animation
-- **`src/pages/Index.tsx`**: Rewrite animation sequence with 5 phases, continuous logomark presence, physical tipping animation, and staggered text reveal
+## Changes
+
+### 1. `src/components/AnimatedEyes.tsx`
+- Add a new prop: `showCovers?: boolean` (default `true`)
+- Only render the white eye-cover divs when `showCovers` is true
+- This lets us show the raw logomark (with its painted eyes) during the lockup phase
+
+### 2. `src/pages/Index.tsx`
+- Change the overlay's initial opacity from `0` to `1` -- it's always visible
+- Remove the `opacity` animation entirely from the motion div (it never needs to fade)
+- Pass `showCovers={isGrown}` to `AnimatedEyes` so white covers only appear when the logo starts growing/rotating
+- Keep the lockup image fading out on `reveal` as before -- now only the text disappears since the icon is already covered by the overlay
+- The `reveal` phase just fades the lockup; the `grow` phase handles movement, scale, and rotation as before
+
+### Phase sequence (unchanged timing):
+```text
+t=0s    "lockup"    -- Full branding visible. Overlay sits on top of icon, invisible to user.
+t=2s    "reveal"    -- lockup.png fades out (text disappears, icon "stays")
+t=2.8s  "grow"      -- Overlay moves to center, scales up, rotates -90 -> 0. Eye covers appear.
+t=4.2s  "eyes-drop" -- Pupils drop in
+t=5.2s  "intro"     -- Text reveals
+```
+
+## Technical Details
+
+### AnimatedEyes.tsx changes:
+```tsx
+// Add prop
+showCovers?: boolean;
+
+// In component, default to true
+const AnimatedEyes = ({ ..., showCovers = true }) => {
+
+// Wrap the white cover divs:
+{eyePositions && showCovers && (
+  // white covers and animated eyes...
+)}
+```
+
+### Index.tsx overlay changes:
+```tsx
+<motion.div
+  initial={{
+    x: logoOffset.x,
+    y: logoOffset.y,
+    rotate: -90,
+    scale: logoOffset.scale,
+    // opacity: 1 -- visible from the start!
+  }}
+  animate={{
+    x: isGrown ? 0 : logoOffset.x,
+    y: isGrown ? 0 : logoOffset.y,
+    rotate: isGrown ? 0 : -90,
+    scale: isGrown ? 1 : logoOffset.scale,
+    // no opacity animation needed
+  }}
+  // ... transitions stay the same
+>
+  <AnimatedEyes
+    size={TARGET_SIZE}
+    animate={showEyes}
+    showEyes={showEyes}
+    showCovers={isGrown}  // covers hidden during lockup, shown during grow
+    dropIn={showEyes}
+  />
+</motion.div>
+```
+
+This approach ensures zero visual discontinuity: the overlay is always there, perfectly matching the lockup icon, so fading the lockup only removes the text.
 
