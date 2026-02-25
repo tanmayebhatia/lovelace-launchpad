@@ -113,14 +113,12 @@ const Index = () => {
                 y: logoOffset.y,
                 rotate: -90,
                 scale: logoOffset.scale,
-                opacity: 0,
               }}
               animate={{
                 x: isGrown ? 0 : logoOffset.x,
                 y: isGrown ? 0 : logoOffset.y,
                 rotate: isGrown ? 0 : -90,
                 scale: isGrown ? 1 : logoOffset.scale,
-                opacity: isRevealed ? 1 : 0,
               }}
               transition={{
                 x: { type: "spring", damping: 22, stiffness: 80 },
@@ -134,6 +132,7 @@ const Index = () => {
                 size={TARGET_SIZE}
                 animate={showEyes}
                 showEyes={showEyes}
+                showCovers={isGrown}
                 dropIn={showEyes}
               />
             </motion.div>
