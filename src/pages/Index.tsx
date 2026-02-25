@@ -4,16 +4,20 @@ import lockupImg from "@/assets/lockup.png";
 import logomarkImg from "@/assets/logomark.png";
 import AnimatedEyes from "@/components/AnimatedEyes";
 
-type Phase = "lockup" | "text-fade" | "fall" | "eyes-drop" | "intro";
+type Phase = "lockup" | "zoom" | "fall" | "eyes-drop" | "intro";
 
 const Index = () => {
   const [phase, setPhase] = useState<Phase>("lockup");
 
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase("text-fade"), 2000);
-    const t2 = setTimeout(() => setPhase("fall"), 3000);
-    const t3 = setTimeout(() => setPhase("eyes-drop"), 4500);
-    const t4 = setTimeout(() => setPhase("intro"), 5500);
+    // lockup visible for 2s, then logomark zooms to center
+    const t1 = setTimeout(() => setPhase("zoom"), 2000);
+    // after zoom settles, tip it over
+    const t2 = setTimeout(() => setPhase("fall"), 3200);
+    // eyes drop in
+    const t3 = setTimeout(() => setPhase("eyes-drop"), 4700);
+    // intro text
+    const t4 = setTimeout(() => setPhase("intro"), 5700);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
@@ -24,7 +28,7 @@ const Index = () => {
 
   const showLogomark = phase !== "lockup";
   const isFallen = phase === "fall" || phase === "eyes-drop" || phase === "intro";
-  const showEyesDrop = phase === "eyes-drop" || phase === "intro";
+  const showEyes = phase === "eyes-drop" || phase === "intro";
   const showIntro = phase === "intro";
 
   return (
@@ -46,29 +50,36 @@ const Index = () => {
           )}
         </AnimatePresence>
 
-        {/* Phases 2-5: Logomark that persists and transforms */}
+        {/* Phases 2-5: Logomark zooms from left position to center, then tips over */}
         {showLogomark && (
           <div className="flex flex-col items-center gap-8">
             <motion.div
-              initial={{ opacity: 0 }}
+              // Start offset to the left (where it was in the lockup) and small,
+              // then animate to center and full size, then rotate to fall
+              initial={{ x: -80, scale: 0.5, opacity: 0, rotate: 0 }}
               animate={{
+                x: 0,
+                scale: 1,
                 opacity: 1,
                 rotate: isFallen ? 90 : 0,
               }}
-              transition={
-                isFallen
-                  ? { rotate: { type: "spring", damping: 12, stiffness: 100 }, opacity: { duration: 0.4 } }
-                  : { opacity: { duration: 0.4 } }
-              }
+              transition={{
+                x: { type: "spring", damping: 20, stiffness: 120 },
+                scale: { type: "spring", damping: 20, stiffness: 120 },
+                opacity: { duration: 0.3 },
+                rotate: isFallen
+                  ? { type: "spring", damping: 12, stiffness: 100, delay: 0 }
+                  : { duration: 0 },
+              }}
               className="flex items-center justify-center"
               style={{ transformOrigin: "center center" }}
             >
-              {showEyesDrop ? (
+              {showEyes ? (
                 <AnimatedEyes
                   size={160}
                   animate={true}
                   showEyes={true}
-                  dropIn={phase === "eyes-drop" || phase === "intro"}
+                  dropIn={true}
                 />
               ) : (
                 <img

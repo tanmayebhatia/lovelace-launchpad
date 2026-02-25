@@ -161,8 +161,8 @@ const AnimatedEyes = ({
               key={`cover-${i}`}
               className="absolute rounded-full bg-background"
               style={{
-                width: `${eyePositions.radius * 2.2}%`,
-                height: `${eyePositions.radius * 2.2}%`,
+                width: `${eyePositions.radius * 2.6}%`,
+                height: `${eyePositions.radius * 2.6}%`,
                 left: `${eye.x}%`,
                 top: `${eye.y}%`,
                 transform: "translate(-50%, -50%)",
