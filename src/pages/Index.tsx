@@ -156,7 +156,7 @@ const Index = () => {
                 y: isGrown ? 0 : logoPos.offsetY,
                 rotate: isGrown ? 0 : -90,
                 scale: isGrown ? 1 : logoPos.size / targetSize,
-                opacity: 1,
+                opacity: isRevealed ? 1 : 0,
               }}
               transition={{
                 x: { type: "spring", damping: 22, stiffness: 80 },
