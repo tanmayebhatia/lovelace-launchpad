@@ -2,14 +2,32 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import logomark from "@/assets/logomark.png";
 
-const AnimatedEyes = ({ size = 200, animate = true }: { size?: number; animate?: boolean }) => {
+interface AnimatedEyesProps {
+  size?: number;
+  animate?: boolean;
+  showEyes?: boolean;
+  dropIn?: boolean;
+  onDropComplete?: () => void;
+}
+
+const AnimatedEyes = ({
+  size = 200,
+  animate = true,
+  showEyes = true,
+  dropIn = false,
+  onDropComplete,
+}: AnimatedEyesProps) => {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [blinking, setBlinking] = useState(false);
-  const [eyePositions, setEyePositions] = useState<{ left: { x: number; y: number }; right: { x: number; y: number }; radius: number } | null>(null);
+  const [eyePositions, setEyePositions] = useState<{
+    left: { x: number; y: number };
+    right: { x: number; y: number };
+    radius: number;
+  } | null>(null);
+  const [dropped, setDropped] = useState(!dropIn);
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Detect eye positions by scanning the image pixels
   const detectEyes = useCallback(() => {
     if (!canvasRef.current) return;
     const canvas = canvasRef.current;
@@ -22,8 +40,6 @@ const AnimatedEyes = ({ size = 200, animate = true }: { size?: number; animate?:
       canvas.height = img.height;
       ctx.drawImage(img, 0, 0);
 
-      // Scan upper portion for dark circular dots (eyes)
-      // Eyes should be in roughly the top 30-45% vertically, 25-75% horizontally
       const scanTop = Math.floor(img.height * 0.25);
       const scanBottom = Math.floor(img.height * 0.45);
       const scanLeft = Math.floor(img.width * 0.25);
@@ -38,7 +54,6 @@ const AnimatedEyes = ({ size = 200, animate = true }: { size?: number; animate?:
           const r = imageData.data[i];
           const g = imageData.data[i + 1];
           const b = imageData.data[i + 2];
-          // Check if pixel is very dark (part of the eye)
           if (r < 30 && g < 30 && b < 30) {
             darkPixels.push({ x: x + scanLeft, y: y + scanTop });
           }
@@ -47,14 +62,12 @@ const AnimatedEyes = ({ size = 200, animate = true }: { size?: number; animate?:
 
       if (darkPixels.length === 0) return;
 
-      // Cluster dark pixels into two groups (left and right eye)
       const midX = img.width / 2;
-      const leftPixels = darkPixels.filter(p => p.x < midX);
-      const rightPixels = darkPixels.filter(p => p.x >= midX);
+      const leftPixels = darkPixels.filter((p) => p.x < midX);
+      const rightPixels = darkPixels.filter((p) => p.x >= midX);
 
       if (leftPixels.length === 0 || rightPixels.length === 0) return;
 
-      // Find center of each cluster
       const avgPos = (pixels: { x: number; y: number }[]) => ({
         x: pixels.reduce((s, p) => s + p.x, 0) / pixels.length,
         y: pixels.reduce((s, p) => s + p.y, 0) / pixels.length,
@@ -63,7 +76,6 @@ const AnimatedEyes = ({ size = 200, animate = true }: { size?: number; animate?:
       const leftCenter = avgPos(leftPixels);
       const rightCenter = avgPos(rightPixels);
 
-      // Estimate radius from cluster spread
       const maxDist = (pixels: { x: number; y: number }[], center: { x: number; y: number }) => {
         let max = 0;
         for (const p of pixels) {
@@ -75,7 +87,6 @@ const AnimatedEyes = ({ size = 200, animate = true }: { size?: number; animate?:
 
       const radius = Math.max(maxDist(leftPixels, leftCenter), maxDist(rightPixels, rightCenter));
 
-      // Convert to percentages of image size
       setEyePositions({
         left: { x: (leftCenter.x / img.width) * 100, y: (leftCenter.y / img.height) * 100 },
         right: { x: (rightCenter.x / img.width) * 100, y: (rightCenter.y / img.height) * 100 },
@@ -90,16 +101,16 @@ const AnimatedEyes = ({ size = 200, animate = true }: { size?: number; animate?:
   }, [animate, detectEyes]);
 
   useEffect(() => {
-    if (!animate) return;
+    if (!animate || !dropped) return;
     const handleMouseMove = (e: MouseEvent) => {
       setMousePos({ x: e.clientX, y: e.clientY });
     };
     window.addEventListener("mousemove", handleMouseMove);
     return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, [animate]);
+  }, [animate, dropped]);
 
   useEffect(() => {
-    if (!animate) return;
+    if (!animate || !dropped) return;
     const blink = () => {
       setBlinking(true);
       setTimeout(() => setBlinking(false), 150);
@@ -108,10 +119,21 @@ const AnimatedEyes = ({ size = 200, animate = true }: { size?: number; animate?:
       if (Math.random() > 0.5) blink();
     }, 2500);
     return () => clearInterval(interval);
-  }, [animate]);
+  }, [animate, dropped]);
+
+  // Wake-up blink after drop-in completes
+  useEffect(() => {
+    if (dropIn && dropped) {
+      const t = setTimeout(() => {
+        setBlinking(true);
+        setTimeout(() => setBlinking(false), 150);
+      }, 200);
+      return () => clearTimeout(t);
+    }
+  }, [dropIn, dropped]);
 
   const getEyeOffset = () => {
-    if (!animate || !containerRef.current) return { x: 0, y: 0 };
+    if (!animate || !dropped || !containerRef.current) return { x: 0, y: 0 };
     const rect = containerRef.current.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height * 0.35;
@@ -139,8 +161,8 @@ const AnimatedEyes = ({ size = 200, animate = true }: { size?: number; animate?:
               key={`cover-${i}`}
               className="absolute rounded-full bg-background"
               style={{
-                width: `${eyePositions.radius * 3}%`,
-                height: `${eyePositions.radius * 3}%`,
+                width: `${eyePositions.radius * 2.2}%`,
+                height: `${eyePositions.radius * 2.2}%`,
                 left: `${eye.x}%`,
                 top: `${eye.y}%`,
                 transform: "translate(-50%, -50%)",
@@ -149,24 +171,52 @@ const AnimatedEyes = ({ size = 200, animate = true }: { size?: number; animate?:
           ))}
 
           {/* Animated eyes */}
-          {[eyePositions.left, eyePositions.right].map((eye, i) => (
-            <motion.div
-              key={`eye-${i}`}
-              className="absolute rounded-full"
-              style={{
-                width: `${eyePositions.radius * 1.8}%`,
-                height: blinking ? `${eyePositions.radius * 0.3}%` : `${eyePositions.radius * 1.8}%`,
-                backgroundColor: "black",
-                left: `${eye.x}%`,
-                top: `${eye.y}%`,
-                transform: `translate(calc(-50% + ${offset.x}px), calc(-50% + ${offset.y}px))`,
-              }}
-              animate={{
-                height: blinking ? `${eyePositions.radius * 0.3}%` : `${eyePositions.radius * 1.8}%`,
-              }}
-              transition={{ duration: 0.08 }}
-            />
-          ))}
+          {showEyes &&
+            [eyePositions.left, eyePositions.right].map((eye, i) => (
+              <motion.div
+                key={`eye-${i}`}
+                className="absolute rounded-full"
+                style={{
+                  width: `${eyePositions.radius * 1.8}%`,
+                  backgroundColor: "black",
+                  left: `${eye.x}%`,
+                  top: `${eye.y}%`,
+                }}
+                initial={
+                  dropIn
+                    ? { y: -50, opacity: 0, height: `${eyePositions.radius * 1.8}%`, x: "-50%" }
+                    : {
+                        opacity: 1,
+                        height: `${eyePositions.radius * 1.8}%`,
+                        x: "-50%",
+                        y: "-50%",
+                      }
+                }
+                animate={{
+                  y: dropped
+                    ? `calc(-50% + ${offset.y}px)`
+                    : -50,
+                  x: dropped
+                    ? `calc(-50% + ${offset.x}px)`
+                    : "-50%",
+                  opacity: dropped ? 1 : 0,
+                  height: blinking
+                    ? `${eyePositions.radius * 0.3}%`
+                    : `${eyePositions.radius * 1.8}%`,
+                }}
+                transition={
+                  dropIn && !dropped
+                    ? { type: "spring", damping: 10, stiffness: 200 }
+                    : { duration: 0.08 }
+                }
+                onAnimationComplete={() => {
+                  if (dropIn && !dropped) {
+                    setDropped(true);
+                    onDropComplete?.();
+                  }
+                }}
+              />
+            ))}
         </>
       )}
     </div>
