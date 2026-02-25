@@ -3,8 +3,9 @@ import { motion } from "framer-motion";
 import lockupImg from "@/assets/lockup.png";
 import logomarkImg from "@/assets/logomark.png";
 import AnimatedEyes from "@/components/AnimatedEyes";
+import BlinkingCursor from "@/components/BlinkingCursor";
 
-type Phase = "lockup" | "reveal" | "grow" | "eyes-drop" | "intro";
+type Phase = "lockup" | "reveal" | "grow" | "eyes-drop" | "intro" | "intro-lovelace" | "intro-tagline";
 
 const TARGET_SIZE = 160;
 // Match CSS: h-20 = 80px, md:h-28 = 112px
@@ -143,15 +144,20 @@ const Index = () => {
       setTimeout(() => setPhase("grow"), 2800),
       setTimeout(() => setPhase("eyes-drop"), 4200),
       setTimeout(() => setPhase("intro"), 5200),
+      setTimeout(() => setPhase("intro-lovelace"), 7000),
+      setTimeout(() => setPhase("intro-tagline"), 8200),
     ];
     return () => timers.forEach(clearTimeout);
   }, []);
 
   const showLockup = phase === "lockup";
   const isRevealed = phase !== "lockup";
-  const isGrown = phase === "grow" || phase === "eyes-drop" || phase === "intro";
-  const showEyes = phase === "eyes-drop" || phase === "intro";
-  const showIntro = phase === "intro";
+  const introPhases: Phase[] = ["intro", "intro-lovelace", "intro-tagline"];
+  const isGrown = phase === "grow" || phase === "eyes-drop" || introPhases.includes(phase);
+  const showEyes = phase === "eyes-drop" || introPhases.includes(phase);
+  const showIntro = introPhases.includes(phase);
+  const showLovelace = phase === "intro-lovelace" || phase === "intro-tagline";
+  const showTagline = phase === "intro-tagline";
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background overflow-hidden">
@@ -208,31 +214,39 @@ const Index = () => {
         </div>
 
         {showIntro && (
-          <div className="flex flex-col items-center gap-8 mt-4">
+          <div className="flex flex-col items-center mt-6">
             <motion.p
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.3, duration: 0.6 }}
-              className="text-sm font-medium tracking-[0.3em] uppercase text-muted-foreground"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.4 }}
+              className="text-sm md:text-base font-medium tracking-wide text-muted-foreground flex items-center"
             >
               Introducing the first PrimaryOS product
+              {!showLovelace && <BlinkingCursor />}
             </motion.p>
-            <motion.h1
-              initial={{ y: 30, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.7, duration: 0.7, ease: "easeOut" }}
-              className="text-6xl md:text-8xl font-black tracking-tight text-foreground"
-            >
-              Lovelace
-            </motion.h1>
-            <motion.p
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 1.2, duration: 0.6 }}
-              className="text-xl md:text-2xl font-medium text-muted-foreground"
-            >
-              Sourcing at scale.
-            </motion.p>
+
+            {showLovelace && (
+              <motion.h1
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+                className="text-5xl md:text-7xl font-black tracking-tight text-foreground mt-6"
+              >
+                Lovelace
+              </motion.h1>
+            )}
+
+            {showLovelace && (
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: showTagline ? 1 : 0 }}
+                transition={{ duration: 0.4 }}
+                className="text-lg md:text-xl font-medium text-muted-foreground mt-4 flex items-center"
+              >
+                Sourcing at scale
+                {showTagline && <BlinkingCursor />}
+              </motion.p>
+            )}
           </div>
         )}
       </div>
