@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import lockupImg from "@/assets/lockup.png";
-import logomarkImg from "@/assets/logomark.png";
 import AnimatedEyes from "@/components/AnimatedEyes";
 
 type Phase = "lockup" | "zoom" | "fall" | "eyes-drop" | "intro";
@@ -10,13 +9,9 @@ const Index = () => {
   const [phase, setPhase] = useState<Phase>("lockup");
 
   useEffect(() => {
-    // lockup visible for 2s, then logomark zooms to center
     const t1 = setTimeout(() => setPhase("zoom"), 2000);
-    // after zoom settles, tip it over
     const t2 = setTimeout(() => setPhase("fall"), 3200);
-    // eyes drop in
     const t3 = setTimeout(() => setPhase("eyes-drop"), 4700);
-    // intro text
     const t4 = setTimeout(() => setPhase("intro"), 5700);
     return () => {
       clearTimeout(t1);
@@ -50,12 +45,10 @@ const Index = () => {
           )}
         </AnimatePresence>
 
-        {/* Phases 2-5: Logomark zooms from left position to center, then tips over */}
+        {/* Phases 2-5: Single AnimatedEyes component, no swapping */}
         {showLogomark && (
           <div className="flex flex-col items-center gap-8">
             <motion.div
-              // Start offset to the left (where it was in the lockup) and small,
-              // then animate to center and full size, then rotate to fall
               initial={{ x: -80, scale: 0.5, opacity: 0, rotate: 0 }}
               animate={{
                 x: 0,
@@ -68,30 +61,20 @@ const Index = () => {
                 scale: { type: "spring", damping: 20, stiffness: 120 },
                 opacity: { duration: 0.3 },
                 rotate: isFallen
-                  ? { type: "spring", damping: 12, stiffness: 100, delay: 0 }
+                  ? { type: "spring", damping: 12, stiffness: 100 }
                   : { duration: 0 },
               }}
               className="flex items-center justify-center"
               style={{ transformOrigin: "center center" }}
             >
-              {showEyes ? (
-                <AnimatedEyes
-                  size={160}
-                  animate={true}
-                  showEyes={true}
-                  dropIn={true}
-                />
-              ) : (
-                <img
-                  src={logomarkImg}
-                  alt="Primary logomark"
-                  className="object-contain"
-                  style={{ width: 160, height: 160 }}
-                />
-              )}
+              <AnimatedEyes
+                size={160}
+                animate={showEyes}
+                showEyes={showEyes}
+                dropIn={showEyes}
+              />
             </motion.div>
 
-            {/* Intro text */}
             {showIntro && (
               <>
                 <motion.p
