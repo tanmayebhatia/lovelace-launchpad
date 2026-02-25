@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import lockupImg from "@/assets/lockup.png";
 import logomarkImg from "@/assets/logomark.png";
 import AnimatedEyes from "@/components/AnimatedEyes";
-import BlinkingCursor from "@/components/BlinkingCursor";
+import TypewriterText from "@/components/TypewriterText";
 
 type Phase = "lockup" | "reveal" | "grow" | "eyes-drop" | "intro" | "intro-lovelace" | "intro-tagline";
 
@@ -144,8 +144,6 @@ const Index = () => {
       setTimeout(() => setPhase("grow"), 2800),
       setTimeout(() => setPhase("eyes-drop"), 4200),
       setTimeout(() => setPhase("intro"), 5200),
-      setTimeout(() => setPhase("intro-lovelace"), 7000),
-      setTimeout(() => setPhase("intro-tagline"), 8200),
     ];
     return () => timers.forEach(clearTimeout);
   }, []);
@@ -215,37 +213,34 @@ const Index = () => {
 
         {showIntro && (
           <div className="flex flex-col items-center mt-6">
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.4 }}
-              className="text-sm md:text-base font-medium tracking-wide text-muted-foreground flex items-center"
-            >
-              Introducing the first PrimaryOS product
-              {!showLovelace && <BlinkingCursor />}
-            </motion.p>
+            <p className="text-sm md:text-base font-medium tracking-wide text-muted-foreground flex items-center">
+              <TypewriterText
+                text="Introducing the first PrimaryOS product"
+                speed={35}
+                showCursor={!showLovelace}
+                onComplete={() => setPhase("intro-lovelace")}
+              />
+            </p>
 
             {showLovelace && (
-              <motion.h1
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
-                className="text-5xl md:text-7xl font-black tracking-tight text-foreground mt-6"
-              >
-                Lovelace
-              </motion.h1>
+              <h1 className="text-5xl md:text-7xl font-black tracking-tight text-foreground mt-6">
+                <TypewriterText
+                  text="Lovelace"
+                  speed={80}
+                  showCursor={!showTagline}
+                  onComplete={() => setPhase("intro-tagline")}
+                />
+              </h1>
             )}
 
-            {showLovelace && (
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: showTagline ? 1 : 0 }}
-                transition={{ duration: 0.4 }}
-                className="text-lg md:text-xl font-medium text-muted-foreground mt-4 flex items-center"
-              >
-                Sourcing at scale
-                {showTagline && <BlinkingCursor />}
-              </motion.p>
+            {showTagline && (
+              <p className="text-lg md:text-xl font-medium text-muted-foreground mt-4 flex items-center">
+                <TypewriterText
+                  text="Sourcing at scale"
+                  speed={40}
+                  showCursor={true}
+                />
+              </p>
             )}
           </div>
         )}
