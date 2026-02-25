@@ -158,7 +158,7 @@ const Index = () => {
   const showTagline = phase === "intro-tagline";
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background overflow-hidden">
+    <div className="flex min-h-screen items-start justify-center bg-background overflow-hidden pt-[35vh]">
       <div className="relative flex flex-col items-center">
         <div className="relative flex items-center justify-center" style={{ minHeight: TARGET_SIZE + 40 }}>
 
