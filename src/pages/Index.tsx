@@ -104,6 +104,8 @@ const Index = () => {
       const x = lockupLogoCX - divToLogoCX * scale;
       const y = lockupLogoCY - divToLogoCY * scale;
 
+
+
       setLogoOffset({ x, y, scale });
     };
 
@@ -113,7 +115,7 @@ const Index = () => {
       lockupH = img1.height;
       lockupResult = scanDarkPixels(img1, {
         left: 0, top: 0,
-        right: Math.floor(img1.width * 0.25),
+        right: Math.floor(img1.width * 0.22),
         bottom: img1.height,
       });
       tryCompute();
