@@ -49,12 +49,12 @@ const Index = () => {
         {showLogomark && (
           <div className="flex flex-col items-center gap-8">
             <motion.div
-              initial={{ x: -80, scale: 0.5, opacity: 0, rotate: 0 }}
+              initial={{ x: -80, scale: 0.5, opacity: 0, rotate: -90 }}
               animate={{
                 x: 0,
                 scale: 1,
                 opacity: 1,
-                rotate: isFallen ? 90 : 0,
+                rotate: isFallen ? 0 : -90,
               }}
               transition={{
                 x: { type: "spring", damping: 20, stiffness: 120 },
