@@ -6,6 +6,7 @@ interface AnimatedEyesProps {
   size?: number;
   animate?: boolean;
   showEyes?: boolean;
+  showCovers?: boolean;
   dropIn?: boolean;
   onDropComplete?: () => void;
 }
@@ -14,6 +15,7 @@ const AnimatedEyes = ({
   size = 200,
   animate = true,
   showEyes = true,
+  showCovers = true,
   dropIn = false,
   onDropComplete,
 }: AnimatedEyesProps) => {
@@ -156,7 +158,7 @@ const AnimatedEyes = ({
       {eyePositions && (
         <>
           {/* White covers to hide original eyes */}
-          {[eyePositions.left, eyePositions.right].map((eye, i) => (
+          {showCovers && [eyePositions.left, eyePositions.right].map((eye, i) => (
             <div
               key={`cover-${i}`}
               className="absolute rounded-full bg-background"
