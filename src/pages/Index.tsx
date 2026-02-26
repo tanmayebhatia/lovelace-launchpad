@@ -183,7 +183,7 @@ const Index = () => {
           />
 
           {/* Logomark overlay */}
-          {logoOffset && (
+          {logoOffset && isRevealed && (
             <motion.div
               className="absolute"
               style={{ transformOrigin: "center center" }}
