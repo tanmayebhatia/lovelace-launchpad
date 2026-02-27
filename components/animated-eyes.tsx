@@ -1,36 +1,28 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+
+interface EyePositions {
+  left: { x: number; y: number };
+  right: { x: number; y: number };
+  radius: number;
+}
 
 interface AnimatedEyesProps {
   size?: number;
-  animate?: boolean;
   showEyes?: boolean;
-  showCovers?: boolean;
   dropIn?: boolean;
-  onDropComplete?: () => void;
 }
 
-export function AnimatedEyes({
-  size = 200,
-  animate = true,
-  showEyes = true,
-  showCovers = true,
-  dropIn = false,
-  onDropComplete,
-}: AnimatedEyesProps) {
+export function AnimatedEyes({ size = 160, showEyes = false }: AnimatedEyesProps) {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [blinking, setBlinking] = useState(false);
-  const [eyePositions, setEyePositions] = useState<{
-    left: { x: number; y: number };
-    right: { x: number; y: number };
-    radius: number;
-  } | null>(null);
-  const [dropped, setDropped] = useState(!dropIn);
+  const [eyePositions, setEyePositions] = useState<EyePositions | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  // Detect eye socket positions from logomark.png via canvas pixel scan
   const detectEyes = useCallback(() => {
     if (!canvasRef.current) return;
     const canvas = canvasRef.current;
@@ -44,21 +36,18 @@ export function AnimatedEyes({
       canvas.height = img.height;
       ctx.drawImage(img, 0, 0);
 
-      const scanTop = Math.floor(img.height * 0.25);
-      const scanBottom = Math.floor(img.height * 0.45);
-      const scanLeft = Math.floor(img.width * 0.25);
-      const scanRight = Math.floor(img.width * 0.75);
+      const scanTop    = Math.floor(img.height * 0.25);
+      const scanBottom = Math.floor(img.height * 0.50);
+      const scanLeft   = Math.floor(img.width * 0.20);
+      const scanRight  = Math.floor(img.width * 0.80);
 
-      const darkPixels: { x: number; y: number }[] = [];
       const imageData = ctx.getImageData(scanLeft, scanTop, scanRight - scanLeft, scanBottom - scanTop);
+      const darkPixels: { x: number; y: number }[] = [];
 
       for (let y = 0; y < imageData.height; y++) {
         for (let x = 0; x < imageData.width; x++) {
           const i = (y * imageData.width + x) * 4;
-          const r = imageData.data[i];
-          const g = imageData.data[i + 1];
-          const b = imageData.data[i + 2];
-          if (r < 30 && g < 30 && b < 30) {
+          if (imageData.data[i] < 30 && imageData.data[i + 1] < 30 && imageData.data[i + 2] < 30) {
             darkPixels.push({ x: x + scanLeft, y: y + scanTop });
           }
         }
@@ -67,32 +56,23 @@ export function AnimatedEyes({
       if (darkPixels.length === 0) return;
 
       const midX = img.width / 2;
-      const leftPixels = darkPixels.filter((p) => p.x < midX);
+      const leftPixels  = darkPixels.filter((p) => p.x < midX);
       const rightPixels = darkPixels.filter((p) => p.x >= midX);
+      if (!leftPixels.length || !rightPixels.length) return;
 
-      if (leftPixels.length === 0 || rightPixels.length === 0) return;
-
-      const avgPos = (pixels: { x: number; y: number }[]) => ({
-        x: pixels.reduce((s, p) => s + p.x, 0) / pixels.length,
-        y: pixels.reduce((s, p) => s + p.y, 0) / pixels.length,
+      const avg = (px: { x: number; y: number }[]) => ({
+        x: px.reduce((s, p) => s + p.x, 0) / px.length,
+        y: px.reduce((s, p) => s + p.y, 0) / px.length,
       });
+      const maxDist = (px: { x: number; y: number }[], c: { x: number; y: number }) =>
+        Math.max(...px.map((p) => Math.sqrt((p.x - c.x) ** 2 + (p.y - c.y) ** 2)));
 
-      const leftCenter = avgPos(leftPixels);
-      const rightCenter = avgPos(rightPixels);
-
-      const maxDist = (pixels: { x: number; y: number }[], center: { x: number; y: number }) => {
-        let max = 0;
-        for (const p of pixels) {
-          const d = Math.sqrt((p.x - center.x) ** 2 + (p.y - center.y) ** 2);
-          if (d > max) max = d;
-        }
-        return max;
-      };
-
+      const leftCenter  = avg(leftPixels);
+      const rightCenter = avg(rightPixels);
       const radius = Math.max(maxDist(leftPixels, leftCenter), maxDist(rightPixels, rightCenter));
 
       setEyePositions({
-        left: { x: (leftCenter.x / img.width) * 100, y: (leftCenter.y / img.height) * 100 },
+        left:  { x: (leftCenter.x  / img.width) * 100, y: (leftCenter.y  / img.height) * 100 },
         right: { x: (rightCenter.x / img.width) * 100, y: (rightCenter.y / img.height) * 100 },
         radius: (radius / img.width) * 100,
       });
@@ -100,128 +80,115 @@ export function AnimatedEyes({
     img.src = "/logomark.png";
   }, []);
 
-  useEffect(() => {
-    detectEyes();
-  }, [detectEyes]);
+  useEffect(() => { detectEyes(); }, [detectEyes]);
 
+  // Mouse tracking — only when eyes are visible
   useEffect(() => {
-    if (!animate || !dropped) return;
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePos({ x: e.clientX, y: e.clientY });
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, [animate, dropped]);
+    if (!showEyes) return;
+    const onMove = (e: MouseEvent) => setMousePos({ x: e.clientX, y: e.clientY });
+    window.addEventListener("mousemove", onMove);
+    return () => window.removeEventListener("mousemove", onMove);
+  }, [showEyes]);
 
+  // Random blinking — only when eyes are visible
   useEffect(() => {
-    if (!animate || !dropped) return;
+    if (!showEyes) return;
     const blink = () => {
       setBlinking(true);
-      setTimeout(() => setBlinking(false), 150);
+      setTimeout(() => setBlinking(false), 140);
     };
-    const interval = setInterval(() => {
-      if (Math.random() > 0.5) blink();
-    }, 2500);
-    return () => clearInterval(interval);
-  }, [animate, dropped]);
+    const id = setInterval(() => { if (Math.random() > 0.5) blink(); }, 2500);
+    return () => clearInterval(id);
+  }, [showEyes]);
 
-  // Wake-up blink after drop-in completes
+  // Opening blink when eyes first appear
   useEffect(() => {
-    if (dropIn && dropped) {
-      const t = setTimeout(() => {
-        setBlinking(true);
-        setTimeout(() => setBlinking(false), 150);
-      }, 200);
-      return () => clearTimeout(t);
-    }
-  }, [dropIn, dropped]);
+    if (!showEyes) return;
+    const t1 = setTimeout(() => setBlinking(true),  80);
+    const t2 = setTimeout(() => setBlinking(false), 220);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [showEyes]);
 
-  const getEyeOffset = () => {
-    if (!animate || !dropped || !containerRef.current) return { x: 0, y: 0 };
+  const getOffset = (): { x: number; y: number } => {
+    if (!showEyes || !containerRef.current) return { x: 0, y: 0 };
     const rect = containerRef.current.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height * 0.35;
     const dx = mousePos.x - cx;
     const dy = mousePos.y - cy;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    const maxOffset = size * 0.025;
-    const factor = Math.min(maxOffset, dist * 0.015);
+    const maxOff = size * 0.025;
+    const factor = Math.min(maxOff, dist * 0.015);
     const angle = Math.atan2(dy, dx);
     return { x: Math.cos(angle) * factor, y: Math.sin(angle) * factor };
   };
 
-  const offset = getEyeOffset();
+  const offset = getOffset();
+  const eyeSize  = eyePositions ? `${eyePositions.radius * 1.8}%` : "0";
+  const coverSize = eyePositions ? `${eyePositions.radius * 2.8}%` : "0";
 
   return (
     <div ref={containerRef} className="relative" style={{ width: size, height: size }}>
       <canvas ref={canvasRef} className="hidden" />
+
+      {/* Logomark — always rendered */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/logomark.png" alt="Lovelace" className="w-full h-full object-contain" />
+      <img
+        src="/logomark.png"
+        alt="Lovelace"
+        className="w-full h-full object-contain"
+        draggable={false}
+      />
 
       {eyePositions && (
         <>
-          {/* White covers to hide original eyes */}
-          {showCovers && [eyePositions.left, eyePositions.right].map((eye, i) => (
-            <div
-              key={`cover-${i}`}
-              className="absolute rounded-full bg-background"
-              style={{
-                width: `${eyePositions.radius * 2.6}%`,
-                height: `${eyePositions.radius * 2.6}%`,
-                left: `${eye.x}%`,
-                top: `${eye.y}%`,
-                transform: "translate(-50%, -50%)",
-              }}
-            />
-          ))}
+          {/* White covers over original eye holes — fade in with eyes */}
+          <AnimatePresence>
+            {showEyes && [eyePositions.left, eyePositions.right].map((eye, i) => (
+              <motion.div
+                key={`cover-${i}`}
+                className="absolute rounded-full bg-background"
+                style={{
+                  width: coverSize,
+                  height: coverSize,
+                  left: `${eye.x}%`,
+                  top: `${eye.y}%`,
+                  transform: "translate(-50%, -50%)",
+                }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.25, delay: 0.05 }}
+              />
+            ))}
+          </AnimatePresence>
 
-          {/* Animated eyes */}
-          {showEyes &&
-            [eyePositions.left, eyePositions.right].map((eye, i) => (
+          {/* Animated pupils — fade in and track mouse */}
+          <AnimatePresence>
+            {showEyes && [eyePositions.left, eyePositions.right].map((eye, i) => (
               <motion.div
                 key={`eye-${i}`}
-                className="absolute rounded-full"
+                className="absolute rounded-full bg-foreground"
                 style={{
-                  width: `${eyePositions.radius * 1.8}%`,
-                  backgroundColor: "black",
+                  width: eyeSize,
                   left: `${eye.x}%`,
                   top: `${eye.y}%`,
                 }}
-                initial={
-                  dropIn
-                    ? { y: -50, opacity: 0, height: `${eyePositions.radius * 1.8}%`, x: "-50%" }
-                    : {
-                        opacity: 1,
-                        height: `${eyePositions.radius * 1.8}%`,
-                        x: "-50%",
-                        y: "-50%",
-                      }
-                }
+                initial={{ opacity: 0, height: eyeSize, x: "-50%", y: "-50%" }}
                 animate={{
-                  y: dropped
-                    ? `calc(-50% + ${offset.y}px)`
-                    : -50,
-                  x: dropped
-                    ? `calc(-50% + ${offset.x}px)`
-                    : "-50%",
-                  opacity: dropped ? 1 : 0,
-                  height: blinking
-                    ? `${eyePositions.radius * 0.3}%`
-                    : `${eyePositions.radius * 1.8}%`,
+                  opacity: 1,
+                  height: blinking ? `${eyePositions.radius * 0.25}%` : eyeSize,
+                  x: `calc(-50% + ${offset.x}px)`,
+                  y: `calc(-50% + ${offset.y}px)`,
                 }}
-                transition={
-                  dropIn && !dropped
-                    ? { type: "spring", damping: 10, stiffness: 200 }
-                    : { duration: 0.08 }
-                }
-                onAnimationComplete={() => {
-                  if (dropIn && !dropped) {
-                    setDropped(true);
-                    onDropComplete?.();
-                  }
+                transition={{
+                  opacity: { duration: 0.3, delay: 0.1 },
+                  height:  { duration: 0.08 },
+                  x:       { duration: 0.06 },
+                  y:       { duration: 0.06 },
                 }}
               />
             ))}
+          </AnimatePresence>
         </>
       )}
     </div>
