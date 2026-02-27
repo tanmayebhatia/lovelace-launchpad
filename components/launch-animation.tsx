@@ -14,6 +14,8 @@ export function LaunchAnimation() {
   const [logoOffset, setLogoOffset] = useState<{ x: number; y: number; scale: number } | null>(null);
   const [lockupHeight, setLockupHeight] = useState(80);
 
+  console.log("[v0] LaunchAnimation rendered, phase:", phase);
+
   // Set lockup height based on screen size
   useEffect(() => {
     setLockupHeight(window.innerWidth >= 768 ? 112 : 80);
@@ -122,6 +124,7 @@ export function LaunchAnimation() {
       });
       tryCompute();
     };
+    img1.onerror = () => console.log("[v0] Failed to load lockup.png");
     img1.src = "/lockup.png";
 
     const img2 = new Image();
@@ -136,6 +139,7 @@ export function LaunchAnimation() {
       });
       tryCompute();
     };
+    img2.onerror = () => console.log("[v0] Failed to load logomark.png");
     img2.src = "/logomark.png";
   }, [lockupHeight]);
 
