@@ -94,8 +94,10 @@ const Index = () => {
       const logoCenterInDivX = mOffX + (logomarkResult.cx / logomarkW) * mRenderW;
       const logoCenterInDivY = mOffY + (logomarkResult.cy / logomarkH) * mRenderH;
 
-      // Scale to match lockup icon width to overlay content width (prevents bleeding into text)
-      const scale = lockupIconW / logoContentW;
+      // Scale to cover lockup icon in both dimensions, with a tiny overscan to hide edge seams
+      const scaleW = lockupIconW / logoContentW;
+      const scaleH = lockupIconH / logoContentH;
+      const scale = Math.max(scaleW, scaleH) * 1.02;
 
       // Offset from div center to content center
       const divToLogoCX = logoCenterInDivX - TARGET_SIZE / 2;
