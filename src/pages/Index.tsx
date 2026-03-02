@@ -105,10 +105,10 @@ const Index = () => {
       const logoCenterInDivX = mOffX + (logomarkResult.cx / logomarkW) * mRenderW;
       const logoCenterInDivY = mOffY + (logomarkResult.cy / logomarkH) * mRenderH;
 
-      // Scale to cover lockup icon in both dimensions, with a tiny overscan to hide edge seams
+      // Scale to cover lockup icon in both dimensions, with overscan to hide edge seams
       const scaleW = lockupIconW / logoContentW;
       const scaleH = lockupIconH / logoContentH;
-      const scale = Math.max(scaleW, scaleH) * 1.005;
+      const scale = Math.max(scaleW, scaleH) * 1.08;
 
       // Offset from div center to content center
       const divToLogoCX = logoCenterInDivX - TARGET_SIZE / 2;
@@ -195,7 +195,7 @@ const Index = () => {
           />
 
           {/* Logomark overlay */}
-          {logoOffset && (
+          {logoOffset && isRevealed && (
             <motion.div
               className="absolute"
               style={{ transformOrigin: "center center" }}
@@ -204,6 +204,7 @@ const Index = () => {
                 y: logoOffset.y,
                 rotate: -90,
                 scale: logoOffset.scale,
+                opacity: 1,
               }}
               animate={{
                 x: isGrown ? 0 : logoOffset.x,
@@ -216,7 +217,6 @@ const Index = () => {
                 y: { type: "spring", damping: 22, stiffness: 80 },
                 rotate: { type: "spring", damping: 14, stiffness: 70 },
                 scale: { type: "spring", damping: 20, stiffness: 80 },
-                opacity: { duration: 0.4 },
               }}
             >
               <AnimatedEyes
