@@ -108,7 +108,7 @@ const Index = () => {
       // Scale to cover lockup icon in both dimensions, with a tiny overscan to hide edge seams
       const scaleW = lockupIconW / logoContentW;
       const scaleH = lockupIconH / logoContentH;
-      const scale = Math.max(scaleW, scaleH) * 1.015;
+      const scale = Math.max(scaleW, scaleH) * 1.01;
 
       // Offset from div center to content center
       const divToLogoCX = logoCenterInDivX - TARGET_SIZE / 2;
