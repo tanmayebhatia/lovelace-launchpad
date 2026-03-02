@@ -19,11 +19,14 @@ const Index = () => {
   useEffect(() => {
     let lockupResult: { cx: number; cy: number; bw: number; bh: number } | null = null;
     let logomarkResult: { cx: number; cy: number; bw: number; bh: number } | null = null;
-    let lockupW = 0, lockupH = 0, logomarkW = 0, logomarkH = 0;
+    let lockupW = 0,
+      lockupH = 0,
+      logomarkW = 0,
+      logomarkH = 0;
 
     const scanDarkPixels = (
       img: HTMLImageElement,
-      region: { left: number; top: number; right: number; bottom: number }
+      region: { left: number; top: number; right: number; bottom: number },
     ) => {
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
@@ -38,11 +41,19 @@ const Index = () => {
       } catch {
         return null;
       }
-      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      let minX = Infinity,
+        maxX = -Infinity,
+        minY = Infinity,
+        maxY = -Infinity;
       for (let y = 0; y < imageData.height; y++) {
         for (let x = 0; x < imageData.width; x++) {
           const i = (y * imageData.width + x) * 4;
-          if (imageData.data[i] < 50 && imageData.data[i + 1] < 50 && imageData.data[i + 2] < 50 && imageData.data[i + 3] > 200) {
+          if (
+            imageData.data[i] < 50 &&
+            imageData.data[i + 1] < 50 &&
+            imageData.data[i + 2] < 50 &&
+            imageData.data[i + 3] > 200
+          ) {
             const absX = x + left;
             const absY = y + top;
             if (absX < minX) minX = absX;
@@ -97,7 +108,7 @@ const Index = () => {
       // Scale to cover lockup icon in both dimensions, with a tiny overscan to hide edge seams
       const scaleW = lockupIconW / logoContentW;
       const scaleH = lockupIconH / logoContentH;
-      const scale = Math.max(scaleW, scaleH) * 1.02;
+      const scale = Math.max(scaleW, scaleH) * 1.015;
 
       // Offset from div center to content center
       const divToLogoCX = logoCenterInDivX - TARGET_SIZE / 2;
@@ -107,8 +118,6 @@ const Index = () => {
       const x = lockupLogoCX - divToLogoCX * scale;
       const y = lockupLogoCY - divToLogoCY * scale;
 
-
-
       setLogoOffset({ x, y, scale });
     };
 
@@ -117,7 +126,8 @@ const Index = () => {
       lockupW = img1.width;
       lockupH = img1.height;
       lockupResult = scanDarkPixels(img1, {
-        left: 0, top: 0,
+        left: 0,
+        top: 0,
         right: Math.floor(img1.width * 0.22),
         bottom: img1.height,
       });
@@ -130,7 +140,8 @@ const Index = () => {
       logomarkW = img2.width;
       logomarkH = img2.height;
       logomarkResult = scanDarkPixels(img2, {
-        left: 0, top: 0,
+        left: 0,
+        top: 0,
         right: img2.width,
         bottom: img2.height,
       });
@@ -170,7 +181,6 @@ const Index = () => {
     <div className="flex min-h-screen items-start justify-center bg-background overflow-hidden pt-[35vh]">
       <div className="relative flex flex-col items-center">
         <div className="relative flex items-center justify-center" style={{ minHeight: TARGET_SIZE + 40 }}>
-
           {/* Full lockup image */}
           <img
             src={lockupImg}
@@ -233,11 +243,7 @@ const Index = () => {
 
             {showLovelace && (
               <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-foreground mt-6">
-                <TypewriterText
-                  text="Lovelace"
-                  speed={80}
-                  showCursor={true}
-                />
+                <TypewriterText text="Lovelace" speed={80} showCursor={true} />
               </h1>
             )}
           </div>
